@@ -4,13 +4,13 @@
 
 <!-- Badge Row 1: Core Info -->
 [![ClawHub](https://img.shields.io/badge/ClawHub-heartbeat--memory-E75C46?logo=clawhub)](https://clawhub.ai/JustZeroX/heartbeat-memory)
-[![GitHub](https://img.shields.io/badge/GitHub-JustZeroX-181717?logo=github)](https://github.com/JustZeroX/skill-heartbeat-memory)
-[![Version](https://img.shields.io/badge/version-0.0.1-orange)](https://github.com/JustZeroX/skill-heartbeat-memory)
+[![GitHub](https://img.shields.io/badge/GitHub-skill--heartbeat--memory-181717?logo=github)](https://github.com/JustZeroX/skill-heartbeat-memory)
+[![Version](https://img.shields.io/badge/version-0.0.3-orange)](https://github.com/JustZeroX/skill-heartbeat-memory)
 
 <!-- Badge Row 2: Platforms -->
-[![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)]() 
-[![Windows](https://img.shields.io/badge/Windows-0078D6?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4OCA4OCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMGgzOXYzOUgweiIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik00OSAwaDM5djM5SDQ5eiIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0wIDQ5aDM5djM5SDB6Ii8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTQ5IDQ5aDM5djM5SDQ5eiIvPjwvc3ZnPg==)]() 
-[![Linux](https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black)]()
+[![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)](https://openclaw.ai) 
+[![Windows](https://img.shields.io/badge/Windows-0078D6?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4OCA4OCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMGgzOXYzOUgweiIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik00OSAwaDM5djM5SDQ5eiIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0wIDQ5aDM5djM5SDB6Ii8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTQ5IDQ5aDM5djM5SDQ5eiIvPjwvc3ZnPg==)](https://openclaw.ai) 
+[![Linux](https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black)](https://openclaw.ai)
 
 <!-- Badge Row 3: License -->
 [![License](https://img.shields.io/badge/License-MIT-BD2D2D)](LICENSE)
@@ -21,6 +21,24 @@
 
 ---
 
+## 🚀 快速开始
+
+**3 步上手：**
+
+```bash
+# 1. 安装
+clawhub install heartbeat-memory
+
+# 2. 重启 Gateway
+openclaw gateway restart
+
+# 3. 等待 Heartbeat 自动触发
+```
+
+首次运行会自动创建配置文件，无需额外配置！
+
+---
+
 ## 目录
 
 - [✨ 核心功能](#-核心功能)
@@ -28,7 +46,6 @@
 - [📖 使用指南](#-使用指南)
 - [⚙️ 配置说明](#️-配置说明)
 - [📊 处理策略](#-处理策略)
-- [🌍 跨平台支持](#-跨平台支持)
 - [❓ 常见问题](#-常见问题)
 - [📄 许可证](#-许可证)
 
@@ -49,53 +66,43 @@
 
 ## 🔧 安装
 
-### 方式 1：安装到全局目录（推荐 ⭐）
+### 方式 1：Via ClawHub（推荐 ⭐）
 
-适合所有工作区共享此 skill，一次安装全局可用：
+若未安装 clawhub，请先安装：
+```bash
+npm install -g clawhub
+```
+
+已安装 clawhub 后，执行：
+```bash
+clawhub install heartbeat-memory
+openclaw gateway restart
+```
+
+**优点：**
+- ✅ 一键安装，自动下载到全局目录
+- ✅ 所有工作区共享
+- ✅ 支持后续更新
+
+### 方式 2：Manual / Git
 
 ```bash
-clawhub install heartbeat-memory --dir ~/.openclaw/skills
+git clone https://github.com/JustZeroX/skill-heartbeat-memory.git ~/.openclaw/skills/heartbeat-memory
 openclaw gateway restart
 ```
 
 **适用场景：**
-- ✅ 多个工作区都需要自动记忆功能
-- ✅ 希望统一配置和管理
-- ✅ 避免重复安装
-
-### 方式 2：安装到当前工作区
-
-仅在当前工作区使用：
-
-```bash
-# macOS/Linux
-cd ~/.openclaw/workspace-creator
-clawhub install heartbeat-memory
-
-# Windows PowerShell
-cd $HOME\.openclaw\workspace-creator
-clawhub install heartbeat-memory
-
-# 重启 Gateway
-openclaw gateway restart
-```
-
-**适用场景：**
-- ✅ 仅单个项目需要记忆功能
-- ✅ 不同项目需要独立配置
+- ✅ 想要自定义代码
+- ✅ 参与贡献开发
+- ✅ ClawHub 不可用时
 
 ### 验证安装
 
 ```bash
-# macOS/Linux - 检查全局安装
 ls ~/.openclaw/skills/heartbeat-memory/SKILL.md
-
-# Windows PowerShell - 检查全局安装
-Test-Path $HOME\.openclaw\skills\heartbeat-memory\SKILL.md
-
-# 检查工作区安装
-ls $OPENCLAW_WORKSPACE/skills/heartbeat-memory/SKILL.md
 ```
+
+看到文件即表示安装成功。
 
 ---
 
@@ -110,43 +117,30 @@ Heartbeat 每 30 分钟触发 → 自动执行 heartbeat-memory
 
 **方式 2：手动调用（subagent 环境）**
 ```javascript
-// 在 subagent 中直接调用
 const heartbeat = require('~/.openclaw/skills/heartbeat-memory/index.js');
-await heartbeat.run();  // 自动使用全局工具
-```
-
-### 首次运行
-
-1. 重启 Gateway
-2. 下次 Heartbeat 自动触发
-3. 自动创建配置文件和目录
-4. 开始处理 sessions
-
-**建议首次配置（避免处理大量历史数据）：**
-```json
-{
-  "memorySave": {
-    "processSessionsAfter": "2026-03-01T00:00:00Z",
-    "maxSessionsPerRun": 20
-  }
-}
+await heartbeat.run();
 ```
 
 ### 查看结果
 
-**当前工作区：**
 ```bash
+# 查看当前工作区
+echo $OPENCLAW_WORKSPACE
+
 # 查看 Daily 笔记
 cat $OPENCLAW_WORKSPACE/memory/daily/YYYY-MM-DD.md
 
 # 查看长期记忆
 cat $OPENCLAW_WORKSPACE/MEMORY.md
+
+# 查看配置
+cat $OPENCLAW_WORKSPACE/memory/heartbeat-memory-config.json
 ```
 
-**默认工作区：**
+### 修改配置
+
 ```bash
-cat ~/.openclaw/workspace/memory/daily/YYYY-MM-DD.md
-cat ~/.openclaw/workspace/MEMORY.md
+vim $OPENCLAW_WORKSPACE/memory/heartbeat-memory-config.json
 ```
 
 ---
@@ -165,23 +159,66 @@ Skill 会自动使用 OpenClaw 主配置的 LLM，无需单独配置 API Key。
 |--------|------|--------|
 | `enabled` | 是否启用 | `true` |
 | `batchSize` | 每批处理数 | `5` |
+| `largeTaskThreshold` | subagent 阈值 | `10` |
 | `timeoutSeconds` | LLM 超时时间（秒） | `1000` |
 | `notifyTarget` | 通知目标 | 自动获取 |
 | `processSessionsAfter` | 只处理此日期后的 sessions | `null` |
+| `maxSessionsPerRun` | 单次最多处理 sessions 数 | `50` |
 | `refineSchedule.type` | 提炼频率 | `weekly` |
+| `refineSchedule.dayOfWeek` | 每周几 | `sunday` |
+| `refineSchedule.time` | 每日时间 | `20:00` |
 
 **timeoutSeconds 建议：**
 - 少量 sessions (<10 个)：300-600 秒
 - 中量 sessions (10-30 个)：600-1000 秒
 - 大量 sessions (>30 个)：1000-1800 秒
+- 首次运行（全量处理）：1800-3600 秒
+
+### 配置示例
+
+**基础配置（默认）：**
+```json
+{
+  "memorySave": {
+    "enabled": true
+  }
+}
+```
+
+**首次运行限制（避免处理大量历史数据）：**
+```json
+{
+  "memorySave": {
+    "enabled": true,
+    "processSessionsAfter": "2026-03-01T00:00:00Z",
+    "maxSessionsPerRun": 20
+  }
+}
+```
+
+**指定通知渠道（飞书）：**
+```json
+{
+  "notifyTarget": "feishu:ou_xxxxxxxxxxxxx",
+  "memorySave": {
+    "enabled": true
+  }
+}
+```
 
 ---
 
 ## 📊 处理策略
 
-### 日常增量
+### 首次启用
 
-根据新 sessions 数量自动选择策略：
+首次运行时：
+- 自动扫描所有 sessions
+- 分批处理（每批 5 个）
+- 生成对应日期的 Daily 笔记
+- 首次强制触发一次 MEMORY.md 提炼
+
+### 日常增量
 
 | 数量 | 策略 | 耗时 |
 |------|------|------|
@@ -209,6 +246,33 @@ sessions_spawn 启动 subagent 进行 LLM 提炼
 
 ---
 
+## ❓ 常见问题
+
+**Q: 需要配置 LLM API Key 吗？**  
+A: **不需要！** Skill 会自动使用 OpenClaw 主配置的 LLM，通过 subagent 方式调用。
+
+**Q: 多久检查一次？**  
+A: 跟随 Heartbeat 频率：
+- 工作日：09:00 / 14:00 / 20:00
+- 周末：10:00 / 20:00
+
+**Q: 如何查看处理进度？**  
+A: 处理完成后会自动发送通知，包含：检查 sessions 数、新处理数、是否提炼 MEMORY。
+
+**Q: 可以修改提炼频率吗？**  
+A: 可以，编辑配置文件中的 `refineSchedule`。
+
+**Q: 如何处理大量 sessions？**  
+A: 自动分批处理，每次 Heartbeat 最多处理 5 个，剩余下次继续。
+
+**Q: 可以禁用自动保存吗？**  
+A: 可以，配置文件中设置 `"enabled": false`。
+
+**Q: 首次运行会提炼 MEMORY.md 吗？**  
+A: **会！** 首次运行会强制触发一次 MEMORY.md 提炼，之后按计划频率执行。
+
+---
+
 ## 🌍 跨平台支持
 
 ### 平台兼容
@@ -217,31 +281,15 @@ sessions_spawn 启动 subagent 进行 LLM 提炼
 - ✅ **Linux** - 完全支持
 - ✅ **Windows** - 完全支持（PowerShell/CMD）
 
-### 路径规范
+### 多工作区支持
 
-| 平台 | 全局技能目录 | 环境变量 |
-|------|------------|---------|
-| **macOS/Linux** | `~/.openclaw/skills/` | `$OPENCLAW_WORKSPACE` |
-| **Windows** | `%USERPROFILE%\.openclaw\skills\` | `%OPENCLAW_WORKSPACE%` |
+Skill 自动支持多工作区，无需额外配置：
 
----
-
-## ❓ 常见问题
-
-### Q: 需要配置 LLM API Key 吗？
-A: **不需要！** Skill 会自动使用 OpenClaw 主配置的 LLM。
-
-### Q: 多久检查一次？
-A: 跟随 Heartbeat 频率（工作日：09:00/14:00/20:00，周末：10:00/20:00）。
-
-### Q: 如何查看处理进度？
-A: 处理完成后会自动发送通知。
-
-### Q: 可以修改提炼频率吗？
-A: 可以，编辑配置文件中的 `refineSchedule`。
-
-### Q: 首次运行会处理所有历史 sessions 吗？
-A: 建议配置 `processSessionsAfter` 限制日期范围，避免处理大量历史数据。
+| 工作区类型 | 配置位置 | 数据位置 |
+|-----------|---------|---------|
+| **默认工作区** | `~/.openclaw/workspace/` | `~/.openclaw/workspace/memory/` |
+| **自定义工作区** | `$OPENCLAW_WORKSPACE/` | `$OPENCLAW_WORKSPACE/memory/` |
+| **项目工作区** | `./.openclaw/` | `./.openclaw/memory/` |
 
 ---
 
@@ -257,6 +305,22 @@ MIT License
 
 ## English Version
 
+### 🚀 Quick Start
+
+**3 Steps:**
+
+```bash
+# 1. Install
+clawhub install heartbeat-memory
+
+# 2. Restart Gateway
+openclaw gateway restart
+
+# 3. Wait for Heartbeat trigger
+```
+
+---
+
 ### Table of Contents
 
 - [✨ Core Features](#-core-features)
@@ -264,7 +328,6 @@ MIT License
 - [📖 Usage Guide](#-usage-guide)
 - [⚙️ Configuration](#️-configuration)
 - [📊 Processing Strategy](#-processing-strategy)
-- [🌍 Cross-Platform Support](#-cross-platform-support)
 - [❓ FAQ](#-faq)
 - [📄 License](#-license)
 
@@ -285,24 +348,30 @@ MIT License
 
 ### 🔧 Installation
 
-#### Option 1: Global Installation (Recommended ⭐)
-
-Suitable for sharing across all workspaces:
+#### Option 1: Via ClawHub (Recommended ⭐)
 
 ```bash
-clawhub install heartbeat-memory --dir ~/.openclaw/skills
-openclaw gateway restart
-```
-
-#### Option 2: Workspace Installation
-
-Only for current workspace:
-
-```bash
-cd ~/.openclaw/workspace-creator
+npm install -g clawhub  # If not installed
 clawhub install heartbeat-memory
 openclaw gateway restart
 ```
+
+**Benefits:**
+- ✅ One-click install to global directory
+- ✅ Share across all workspaces
+- ✅ Support updates
+
+#### Option 2: Manual / Git
+
+```bash
+git clone https://github.com/JustZeroX/skill-heartbeat-memory.git ~/.openclaw/skills/heartbeat-memory
+openclaw gateway restart
+```
+
+**Use Cases:**
+- ✅ Want to customize code
+- ✅ Contribute to development
+- ✅ ClawHub unavailable
 
 ---
 
@@ -321,21 +390,12 @@ const heartbeat = require('~/.openclaw/skills/heartbeat-memory/index.js');
 await heartbeat.run();
 ```
 
-#### First Run
+#### View Results
 
-1. Restart Gateway
-2. Next Heartbeat auto-triggers
-3. Auto-create config files
-4. Start processing sessions
-
-**Recommended first config (avoid processing大量 history):**
-```json
-{
-  "memorySave": {
-    "processSessionsAfter": "2026-03-01T00:00:00Z",
-    "maxSessionsPerRun": 20
-  }
-}
+```bash
+echo $OPENCLAW_WORKSPACE
+cat $OPENCLAW_WORKSPACE/memory/daily/YYYY-MM-DD.md
+cat $OPENCLAW_WORKSPACE/MEMORY.md
 ```
 
 ---
@@ -355,20 +415,60 @@ Edit `<workspace>/memory/heartbeat-memory-config.json`:
 | `enabled` | Enable/disable | `true` |
 | `batchSize` | Batch size | `5` |
 | `timeoutSeconds` | LLM timeout (seconds) | `1000` |
+| `notifyTarget` | Notification target | Auto-detect |
+| `processSessionsAfter` | Process sessions after date | `null` |
 | `refineSchedule.type` | Refinement frequency | `weekly` |
 
 **timeoutSeconds Recommendations:**
 - Few sessions (<10): 300-600 seconds
 - Medium sessions (10-30): 600-1000 seconds
 - Many sessions (>30): 1000-1800 seconds
+- First run (full): 1800-3600 seconds
+
+#### Config Examples
+
+**Basic (Default):**
+```json
+{
+  "memorySave": {
+    "enabled": true
+  }
+}
+```
+
+**First Run (Limit History):**
+```json
+{
+  "memorySave": {
+    "enabled": true,
+    "processSessionsAfter": "2026-03-01T00:00:00Z",
+    "maxSessionsPerRun": 20
+  }
+}
+```
+
+**Custom Notification (Feishu):**
+```json
+{
+  "notifyTarget": "feishu:ou_xxxxxxxxxxxxx",
+  "memorySave": {
+    "enabled": true
+  }
+}
+```
 
 ---
 
 ### 📊 Processing Strategy
 
-#### Daily Incremental
+#### First Run
 
-Auto-select strategy by session count:
+- Scan all sessions
+- Batch process (5 per batch)
+- Generate Daily notes
+- Force refine MEMORY.md once
+
+#### Daily Incremental
 
 | Count | Strategy | Time |
 |-------|----------|------|
@@ -396,6 +496,28 @@ Send completion notification
 
 ---
 
+### ❓ FAQ
+
+**Q: Need LLM API Key?**  
+A: **No!** Skill auto-uses OpenClaw's main LLM via subagent.
+
+**Q: How often to check?**  
+A: Follows Heartbeat frequency (Weekdays: 09:00/14:00/20:00, Weekends: 10:00/20:00).
+
+**Q: How to check progress?**  
+A: Auto-send notification after completion with stats.
+
+**Q: Can I change refinement frequency?**  
+A: Yes, edit `refineSchedule` in config.
+
+**Q: Can I disable auto-save?**  
+A: Yes, set `"enabled": false` in config.
+
+**Q: Will first run refine MEMORY.md?**  
+A: **Yes!** First run forces one MEMORY.md refinement.
+
+---
+
 ### 🌍 Cross-Platform Support
 
 #### Platform Compatibility
@@ -404,31 +526,13 @@ Send completion notification
 - ✅ **Linux** - Full support
 - ✅ **Windows** - Full support (PowerShell/CMD)
 
-#### Path Specifications
+#### Multi-Workspace
 
-| Platform | Global Skills Dir | Environment Variable |
-|----------|------------------|---------------------|
-| **macOS/Linux** | `~/.openclaw/skills/` | `$OPENCLAW_WORKSPACE` |
-| **Windows** | `%USERPROFILE%\.openclaw\skills\` | `%OPENCLAW_WORKSPACE%` |
-
----
-
-### ❓ FAQ
-
-### Q: Need LLM API Key?
-A: **No!** Skill auto-uses OpenClaw's main LLM.
-
-### Q: How often to check?
-A: Follows Heartbeat frequency.
-
-### Q: How to check progress?
-A: Auto-send notification after completion.
-
-### Q: Can I change refinement frequency?
-A: Yes, edit `refineSchedule` in config.
-
-### Q: Will first run process all history?
-A: Recommend configuring `processSessionsAfter` to limit date range.
+| Workspace Type | Config Location | Data Location |
+|---------------|-----------------|---------------|
+| **Default** | `~/.openclaw/workspace/` | `~/.openclaw/workspace/memory/` |
+| **Custom** | `$OPENCLAW_WORKSPACE/` | `$OPENCLAW_WORKSPACE/memory/` |
+| **Project** | `./.openclaw/` | `./.openclaw/memory/` |
 
 ---
 
