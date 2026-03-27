@@ -9,7 +9,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { refineMemory: refineMemoryViaSubagent } = require('./subagent-runner');
+
+// 注意：MEMORY.md 提炼使用规则引擎（降级方案），不使用 subagent
+// 原因：subagent-runner.js 已在优化阶段删除（代码模块化）
+// 如需使用 LLM 提炼，需要在 index.js 中直接调用 sessions_spawn
 
 /**
  * 读取所有 Daily 笔记
@@ -60,19 +63,11 @@ async function refineMemoryWithLLM(dailyNotes) {
     return `【${note.date}】\n${note.content.substring(0, 2000)}`;
   });
   
-  try {
-    console.log('  🤖 使用 LLM 提炼长期记忆...');
-    const memoryContent = await refineMemoryViaSubagent(notesContent);
-    
-    return {
-      success: true,
-      content: memoryContent,
-      notesProcessed: notesToProcess.length
-    };
-  } catch (error) {
-    console.error('  ⚠️  LLM 提炼记忆失败，使用规则提炼:', error.message);
-    return refineMemoryWithRules(dailyNotes);
-  }
+  // 注意：已移除 subagent 调用，直接使用规则提炼
+  // 原因：subagent-runner.js 已在代码模块化时删除
+  // 如需 LLM 提炼，应在 index.js 主流程中调用 sessions_spawn
+  console.log('  📝 使用规则提炼长期记忆...');
+  return refineMemoryWithRules(dailyNotes);
 }
 
 /**
