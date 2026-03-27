@@ -25,13 +25,12 @@ const os = require('os');
 const { execSync } = require('child_process');
 
 // 导入工具模块
-let configSync, dateDetector, sessionFilters, memoryRefiner;
+let configSync, dateDetector, sessionFilters;
 
 try {
   configSync = require('./utils/config-sync');
   dateDetector = require('./utils/date-detector');
   sessionFilters = require('./utils/session-filters');
-  memoryRefiner = require('./utils/memory-refiner');
 } catch (e) {
   console.error('❌ 模块加载失败:', e.message);
   process.exit(1);
@@ -40,7 +39,6 @@ try {
 const { syncHeartbeatMD, computeConfigHash } = configSync;
 const { autoDetectProcessSessionsAfter } = dateDetector;
 const { filterSessions, limitSessions } = sessionFilters;
-const { detectActiveSessions, getIncrementalMessages, generateIncrementalSummary, updateDailyNoteForActiveSessions } = memoryRefiner;
 
 // ============================================================
 // 工作区检测模块
@@ -288,37 +286,12 @@ function determineCurrentWorkspace(sessions, specifiedWorkspace) {
     return { agentId, workspace: wsPath, isDefault: true };
   }
   
-  // 多个工作区，尝试从 HEARTBEAT.md 读取
-  try {
-    const heartbeatPath = path.join(os.homedir(), '.openclaw', 'workspace', 'HEARTBEAT.md');
-    if (fs.existsSync(heartbeatPath)) {
-      const content = fs.readFileSync(heartbeatPath, 'utf-8');
-      const match = content.match(/工作区：\s*(\S+)/);
-      if (match && match[1]) {
-        const workspaceName = match[1];
-        // 尝试匹配：workspace 名称 或 agent ID
-        let wsPath = map[workspaceName];  // 直接匹配 agent ID
-        if (!wsPath) {
-          // 尝试匹配 workspace 路径
-          wsPath = Object.values(map).find(ws => ws.includes(workspaceName));
-        }
-        if (wsPath) {
-          const agentId = Object.keys(map).find(k => map[k] === wsPath) || workspaceName;
-          console.log(`✅ 从 HEARTBEAT.md 读取工作区：${agentId} → ${wsPath}`);
-          return { agentId, workspace: wsPath, isDefault: false };
-        }
-      }
-    }
-  } catch (e) {
-    console.log('⚠️  读取 HEARTBEAT.md 失败:', e.message);
-  }
-  
   // 多个工作区，无法自动判断
   const list = entries.map(([id, ws]) => `- ${id}: ${ws}`).join('\n');
   throw new Error(
     '❌ 检测到多个工作区，无法自动判断当前 agent 使用哪一个：\n' +
     list + '\n\n' +
-    '请在 HEARTBEAT.md 中指定当前工作区路径（例如：工作区：workspace）。'
+    '请在 HEARTBEAT.md 中指定当前工作区路径。'
   );
 }
 
@@ -419,30 +392,14 @@ function loadConfig() {
 function loadState() {
   try {
     if (fs.existsSync(PATHS.stateFile)) {
-      const state = JSON.parse(fs.readFileSync(PATHS.stateFile, 'utf-8'));
-      
-      // 兼容性处理：如果 processedSessions 是数组，转换为对象格式
-      if (Array.isArray(state.processedSessions)) {
-        const oldArray = state.processedSessions;
-        state.processedSessions = {};
-        for (const sessionId of oldArray) {
-          state.processedSessions[sessionId] = {
-            lastMessageTime: null,
-            lastMessageCount: 0,
-            status: 'active'
-          };
-        }
-        console.log('✅ 状态文件格式已升级（数组 → 对象）');
-      }
-      
-      return state;
+      return JSON.parse(fs.readFileSync(PATHS.stateFile, 'utf-8'));
     }
   } catch (e) {
     console.error('读取状态失败:', e.message);
   }
   return {
     memorySave: { enabled: true, firstRunDetected: false },
-    processedSessions: {}, // 改为对象，支持详细状态
+    processedSessions: [],
     lastCheck: null,
     pendingSessions: [],
     lastRefine: null
@@ -905,11 +862,7 @@ async function processSessions(sessions_list_fn, sessions_history_fn, sessions_s
   }
 
   let state = loadState();
-  // 向后兼容：processedSessions 可能是数组（旧格式）或对象（新格式）
-  const processedSessions = state.processedSessions || {};
-  const processedIds = Array.isArray(processedSessions) 
-    ? new Set(processedSessions) 
-    : new Set(Object.keys(processedSessions));
+  const processedIds = new Set(state.processedSessions || []);
 
   // ========== 步骤 5.5：同步 HEARTBEAT.md（配置变更时更新） ==========
   // 计算当前配置 hash，对比 state 中保存的 hash
@@ -925,22 +878,16 @@ async function processSessions(sessions_list_fn, sessions_history_fn, sessions_s
   }
 
   // ========== 步骤 6：过滤新 sessions + 字段兼容性检查 ==========
-  const processedIdsArray = Array.isArray(state.processedSessions) ? state.processedSessions : Object.keys(state.processedSessions);
-  const processedIdsSet = new Set(processedIdsArray);
-  const { validSessions, newSessions, skippedCount } = filterSessions(sessions, processedIdsSet, config);
+  const { validSessions, newSessions, skippedCount } = filterSessions(sessions, processedIds, config);
 
   console.log(`📊 新 sessions: ${newSessions.length} 个`);
-
-  // ========== 步骤 6.5：【新增】检测活跃 session（已处理 session 的新消息） ==========
-  const activeSessions = detectActiveSessions(sessions, state.processedSessions);
-  console.log(`📊 活跃 sessions: ${activeSessions.length} 个`);
 
   // Issue #9 修复：限制单次处理数量
   const { limitedSessions, remainingCount } = limitSessions(newSessions, config.memorySave?.maxSessionsPerRun || 50);
   const sessionsToProcess = limitedSessions;
 
-  if (sessionsToProcess.length === 0 && activeSessions.length === 0) {
-    console.log('✅ 没有新 sessions 或活跃 session，检查 MEMORY.md 提炼...');
+  if (sessionsToProcess.length === 0) {
+    console.log('✅ 没有新 sessions，检查 MEMORY.md 提炼...');
     state.lastCheck = new Date().toISOString();
     saveState(state);
     return { success: true, processed: 0 };
@@ -1031,58 +978,6 @@ async function processSessions(sessions_list_fn, sessions_history_fn, sessions_s
     }
   }
 
-
-  // ========== 步骤 8.5：【新增】处理活跃 session 增量更新 ==========
-  const activeSessionUpdates = [];
-  if (activeSessions.length > 0) {
-    console.log('\n🔄 处理活跃 session 增量更新...');
-    
-    for (const session of activeSessions) {
-      const sessionId = session.id;
-      console.log(`  📝 增量更新：${sessionId.substring(0, 20)}... (+${session.newMessageCount}条)`);
-      
-      // 获取增量消息
-      const newMessages = await getIncrementalMessages(session, sessions_history_fn);
-      
-      if (newMessages.length > 0) {
-        // 获取现有摘要
-        const existingSummary = {
-          summary: '已有会话摘要',
-          decisions: [],
-          topics: session.topics || ['#日常']
-        };
-        
-        // 生成增量摘要
-        const incrementalResult = await generateIncrementalSummary(
-          newMessages,
-          existingSummary,
-          sessions_spawn_fn,
-          config
-        );
-        
-        if (incrementalResult.hasUpdate) {
-          activeSessionUpdates.push({
-            id: sessionId,
-            title: session.title || '会话更新',
-            status: 'active',
-            topics: [...existingSummary.topics, ...incrementalResult.newTopics],
-            updateSummary: incrementalResult.updateSummary,
-            newDecisions: incrementalResult.newDecisions
-          });
-        }
-      }
-    }
-    
-    // 更新 Daily 笔记
-    if (activeSessionUpdates.length > 0) {
-      const today = new Date().toISOString().split('T')[0];
-      const updateResult = updateDailyNoteForActiveSessions(PATHS.dailyDir, activeSessionUpdates, today);
-      if (updateResult.success) {
-        console.log(`\n📁 Daily 笔记已更新：${path.basename(updateResult.path)}`);
-      }
-    }
-  }
-
   // ========== 步骤 9：写入 Daily 笔记 ==========
   if (summaries.length > 0) {
     const today = new Date().toISOString().split('T')[0];
@@ -1095,40 +990,7 @@ async function processSessions(sessions_list_fn, sessions_history_fn, sessions_s
   }
 
   // ========== 步骤 10：更新状态 + MEMORY.md 提炼检查 ==========
-  // 更新状态：使用对象格式保存每个 session 的详细状态
-  const newProcessedSessions = {};
-  for (const id of processedIdsSet) {
-    const existingInfo = state.processedSessions[id] || {};
-    
-    // 从 sessions 列表中查找对应的 session 对象
-    const sessionObj = sessions.find(s => (s.sessionKey || s.sessionId || s.key) === id);
-    
-    // 获取实际消息数：优先从 session 对象获取，否则使用 sessions_history_fn 查询
-    let actualMessageCount = existingInfo.lastMessageCount || 0;
-    if (sessionObj) {
-      // 方案 1：检查 session 对象中是否有 messageCount 字段
-      if (typeof sessionObj.messageCount === 'number') {
-        actualMessageCount = sessionObj.messageCount;
-      }
-      // 方案 2：从 lastMessageIndex 推断（如果有）
-      else if (typeof sessionObj.lastMessageIndex === 'number') {
-        actualMessageCount = sessionObj.lastMessageIndex;
-      }
-    }
-    
-    newProcessedSessions[id] = {
-      lastMessageTime: new Date().toISOString(),
-      lastMessageCount: actualMessageCount,
-      status: 'active'
-    };
-  }
-  // 合并活跃 session 的更新
-  for (const update of activeSessionUpdates) {
-    if (newProcessedSessions[update.id]) {
-      newProcessedSessions[update.id].lastMessageTime = new Date().toISOString();
-    }
-  }
-  state.processedSessions = newProcessedSessions;
+  state.processedSessions = [...processedIds];
   state.lastCheck = new Date().toISOString();
   saveState(state);
 

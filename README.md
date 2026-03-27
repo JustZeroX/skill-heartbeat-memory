@@ -14,7 +14,7 @@
 <!-- Badge Row 1: Core Info -->
 [![ClawHub](https://img.shields.io/badge/ClawHub-heartbeat--memory-E75C46?logo=clawhub)](https://clawhub.ai/JustZeroX/heartbeat-memory)
 [![GitHub](https://img.shields.io/badge/GitHub-JustZeroX-181717?logo=github)](https://github.com/JustZeroX/skill-heartbeat-memory)
-[![Version](https://img.shields.io/badge/version-0.0.5-orange)](https://github.com/JustZeroX/skill-heartbeat-memory)
+[![Version](https://img.shields.io/badge/version-0.0.6-orange)](https://github.com/JustZeroX/skill-heartbeat-memory)
 
 <!-- Badge Row 2: Platforms -->
 [![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)](https://openclaw.ai) 
@@ -107,10 +107,11 @@ AI 会在主会话中直接执行，无需额外配置。
 ## ✨ 核心功能
 
 - **🤖 自动检查新 sessions** - 每次 Heartbeat 触发时自动扫描
+- **🔄 增量更新支持** - 检测活跃 session 的新内容并生成增量摘要
 - **📝 Daily 笔记生成** - 自动生成格式化的每日聊天记录
 - **🧠 MEMORY.md 提炼** - 定期提炼长期记忆（默认每周日 20:00）
 - **📊 智能分批处理** - 根据任务量自动选择处理策略
-- **📈 状态追踪** - 记录处理进度，支持断点续处理
+- **📈 状态追踪** - 记录每个 session 的最后处理位置，避免重复处理
 - **🔔 完成通知** - 处理后自动发送通知
 - **🚀 无需配置 LLM** - 自动使用 OpenClaw 主配置的 LLM
 - **📅 智能日期检测** - 自动检测最早 session 日期或 workspace 创建日期
@@ -247,6 +248,50 @@ cat ~/.openclaw/workspace/memory/heartbeat-state.json
 
 ```bash
 vim ~/.openclaw/workspace/memory/heartbeat-memory-config.json
+```
+
+---
+
+## 🔄 增量更新说明
+
+**问题背景：**
+- 之前的设计只检测**新 sessions**，忽略已有 session 的内容增长
+- 用户在长期 session 中持续对话时，新内容不会被记录
+
+**解决方案：**
+- ✅ **活跃 session 检测** - 比较 `lastMessageCount` 判断是否有新消息
+- ✅ **增量摘要生成** - 只处理新增的消息，不重复处理旧内容
+- ✅ **状态追踪** - 记录每个 session 的 `lastMessageCount` 和 `lastMessageTime`
+- ✅ **Daily 笔记更新** - 在已有笔记中追加/更新对应 session 的内容
+- ✅ **智能消息处理** - 动态调整处理数量（8-20 条），优先用户消息（70%）
+- ✅ **消息数动态获取** - 从 session 对象获取实际消息数，非硬编码
+
+**状态文件结构：**
+```json
+{
+  "processedSessions": {
+    "session-xxx": {
+      "lastMessageTime": "2026-03-27T10:00:00Z",
+      "lastMessageCount": 50,  // 动态获取实际消息数，非硬编码
+      "status": "active"
+    }
+  }
+}
+```
+
+**技术细节：**
+- **消息数获取**：优先从 `session.messageCount` 获取，降级到 `session.lastMessageIndex`
+- **动态处理数量**：根据消息长度自动调整（短消息 20 条，长消息 8 条）
+- **消息优先级**：70% 用户消息 + 30% AI 回复，确保关键信息不遗漏
+- **Prompt 优化**：完整上下文 + 严格 JSON 格式 + 12 个推荐标签
+
+**Daily 笔记格式：**
+```markdown
+### 📋 会话标题
+**标签：** ✅ | #话题 | 🔄 已更新
+**时间：** 10:00-11:00（14:00 更新）
+**摘要：** ...（包含新内容的增量摘要）
+**新增内容：** 14:00 后讨论了 XXX...
 ```
 
 ---
@@ -586,6 +631,8 @@ openclaw gateway restart
 ### ✨ Core Features
 
 - 🤖 Auto session scanning
+- 🔄 Incremental updates - Detects new content in active sessions
+- 🧠 Smart message processing - Dynamic batch size (8-20), 70% user messages priority
 - 📝 Daily note generation
 - 🧠 MEMORY.md refinement
 - 📊 Smart batching
