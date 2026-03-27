@@ -24,6 +24,22 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 
+// 导入工具模块
+let configSync, dateDetector, sessionFilters;
+
+try {
+  configSync = require('./utils/config-sync');
+  dateDetector = require('./utils/date-detector');
+  sessionFilters = require('./utils/session-filters');
+} catch (e) {
+  console.error('❌ 模块加载失败:', e.message);
+  process.exit(1);
+}
+
+const { syncHeartbeatMD, computeConfigHash } = configSync;
+const { autoDetectProcessSessionsAfter } = dateDetector;
+const { filterSessions, limitSessions } = sessionFilters;
+
 // ============================================================
 // 工作区检测模块
 // ============================================================
@@ -826,54 +842,51 @@ async function processSessions(sessions_list_fn, sessions_history_fn, sessions_s
     return { success: true, reason: 'disabled' };
   }
 
+  // ========== 步骤 5.1：自动检测 processSessionsAfter（首次运行时） ==========
+  // 如果配置为 null，自动检测最早的 session 日期
+  if (!config.memorySave?.processSessionsAfter) {
+    const detectedDate = autoDetectProcessSessionsAfter(workspace, sessions);
+    if (detectedDate) {
+      config.memorySave.processSessionsAfter = detectedDate;
+      console.log('✅ 自动设置 processSessionsAfter:', detectedDate);
+      
+      // 保存配置（只保存一次，后续不再覆盖）
+      try {
+        const configToSave = Object.assign({}, DEFAULT_CONFIG, config);
+        fs.writeFileSync(PATHS.configFile, JSON.stringify(configToSave, null, 2), 'utf-8');
+        console.log('✅ 已保存配置到 heartbeat-memory-config.json');
+      } catch (e) {
+        console.error('⚠️  保存配置失败:', e.message);
+      }
+    }
+  }
+
   let state = loadState();
   const processedIds = new Set(state.processedSessions || []);
 
-  // ========== 步骤 6：过滤新 sessions + 字段兼容性检查 ==========
-  // Issue #5 修复：兼容不同 OpenClaw 版本的 session 字段
-  const validSessions = sessions.filter(s => {
-    // 至少需要一个标识字段
-    const hasId = s.sessionKey || s.sessionId || s.key || s.id;
-    // 至少需要一个内容来源（transcriptPath 或 messages）
-    const hasContent = s.transcriptPath || s.messages || s.history;
-    return hasId && hasContent;
-  });
-  
-  const skippedCount = sessions.length - validSessions.length;
-  if (skippedCount > 0) {
-    console.log(`⚠️  跳过 ${skippedCount} 个格式不兼容的 sessions`);
+  // ========== 步骤 5.5：同步 HEARTBEAT.md（配置变更时更新） ==========
+  // 计算当前配置 hash，对比 state 中保存的 hash
+  const currentHash = computeConfigHash(config);
+  if (state.configHash !== currentHash) {
+    console.log('📝 检测到配置变更，同步 HEARTBEAT.md...');
+    syncHeartbeatMD(config, workspace);
+    state.configHash = currentHash;
+    saveState(state);
+    console.log('✅ HEARTBEAT.md 已更新');
+  } else {
+    console.log('⏭️  配置未变更，跳过 HEARTBEAT.md 同步');
   }
-  
-  const newSessions = validSessions.filter(s => {
-    const id = s.sessionKey || s.sessionId || s.key || s.id;
-    if (!id || processedIds.has(id)) return false;
-    
-    // Issue #6 修复：日期范围过滤
-    if (config.memorySave?.processSessionsAfter) {
-      const cutoffDate = new Date(config.memorySave.processSessionsAfter);
-      const sessionDate = s.updatedAt || s.modified || s.createdAt;
-      if (sessionDate) {
-        const sessionTime = new Date(sessionDate);
-        if (sessionTime < cutoffDate) {
-          console.log(`  ⏭️  跳过 ${id.substring(0, 20)}... (早于 ${config.memorySave.processSessionsAfter})`);
-          return false;
-        }
-      }
-    }
-    
-    return true;
-  });
+
+  // ========== 步骤 6：过滤新 sessions + 字段兼容性检查 ==========
+  const { validSessions, newSessions, skippedCount } = filterSessions(sessions, processedIds, config);
 
   console.log(`📊 新 sessions: ${newSessions.length} 个`);
 
   // Issue #9 修复：限制单次处理数量
-  const maxSessions = config.memorySave?.maxSessionsPerRun || 50;
-  if (newSessions.length > maxSessions) {
-    console.log(`⚠️  限制处理数量：${maxSessions} 个（剩余 ${newSessions.length - maxSessions} 个下次处理）`);
-    newSessions.splice(maxSessions);
-  }
+  const { limitedSessions, remainingCount } = limitSessions(newSessions, config.memorySave?.maxSessionsPerRun || 50);
+  const sessionsToProcess = limitedSessions;
 
-  if (newSessions.length === 0) {
+  if (sessionsToProcess.length === 0) {
     console.log('✅ 没有新 sessions，检查 MEMORY.md 提炼...');
     state.lastCheck = new Date().toISOString();
     saveState(state);
@@ -884,9 +897,9 @@ async function processSessions(sessions_list_fn, sessions_history_fn, sessions_s
   const summaries = [];
   const batchSize = config.memorySave?.batchSize || 5;
 
-  for (let i = 0; i < newSessions.length; i += batchSize) {
-    const batch = newSessions.slice(i, i + batchSize);
-    console.log(`\n📦 批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(newSessions.length / batchSize)} (${batch.length} 个)`);
+  for (let i = 0; i < sessionsToProcess.length; i += batchSize) {
+    const batch = sessionsToProcess.slice(i, i + batchSize);
+    console.log(`\n📦 批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(sessionsToProcess.length / batchSize)} (${batch.length} 个)`);
 
     for (const session of batch) {
       const sessionId = session.sessionKey || session.sessionId;
@@ -1063,12 +1076,10 @@ ${needsRefine ? '✅ MEMORY.md 已提炼' : ''}
 
 /**
  * 自包含执行入口 - 直接使用全局工具函数
- * 适用于 subagent 环境或工具全局可用的场景
- * 
- * 智能自愈：如果检测到当前环境不正确，自动通过 sessions_spawn 重启
+ * 适用于 OpenClaw Agent 运行时环境（工具已注入）
  */
 async function run(configOverride, specifiedWorkspace) {
-  console.log('🚀 heartbeat-memory (自包含模式) 启动...\n');
+  console.log('🚀 heartbeat-memory 启动...\n');
   
   // 检查工具是否全局可用
   const tools = {
@@ -1079,52 +1090,55 @@ async function run(configOverride, specifiedWorkspace) {
     feishu_get_user: typeof feishu_get_user !== 'undefined' ? feishu_get_user : null
   };
   
-  // ========== 智能自愈：检测环境，不对就自动重启 ==========
-  if (!tools.sessions_list || !tools.sessions_history) {
-    console.log('⚠️  检测到当前环境缺少必要工具');
-    console.log('🔄 尝试通过 sessions_spawn 自动重启...\n');
-    
-    // 如果有 sessions_spawn，用它重启
-    if (tools.sessions_spawn) {
-      try {
-        const result = await tools.sessions_spawn({
-          task: `
-            const heartbeat = require('~/.openclaw/skills/heartbeat-memory/index.js');
-            const result = await heartbeat.run(${JSON.stringify(configOverride || {})});
-            console.log('✅ 自愈模式执行完成');
-            console.log(JSON.stringify(result));
-          `,
-          runtime: 'subagent',
-          mode: 'run',
-          timeoutSeconds: 900
-        });
-        
-        console.log('✅ 自愈成功！已在正确的环境中执行');
-        return {
-          success: true,
-          selfHealed: true,
-          message: '检测到环境不正确，已自动通过 sessions_spawn 重启执行',
-          result
-        };
-      } catch (e) {
-        console.error('❌ 自愈失败:', e.message);
-        throw e;
-      }
-    }
-    
-    // 如果连 sessions_spawn 都没有，报错
-    throw new Error(
-      '当前环境缺少必要工具（sessions_list, sessions_history），且无法自动重启。\n' +
-      '请通过 sessions_spawn 调用此 Skill。'
-    );
+  // 验证必要工具
+  if (!tools.sessions_list) {
+    const errorMsg = `❌ sessions_list 工具不可用
+
+💡 正确调用方式：
+1. Heartbeat 自动触发（推荐）- 系统会在 Heartbeat 时自动调用
+2. 在主 Agent 会话中直接调用 - const heartbeat = require('~/.openclaw/skills/heartbeat-memory/index.js'); await heartbeat.run();
+
+❌ 错误方式：独立 Node.js 进程或 sessions_spawn 调用（无工具注入）
+
+📖 详细文档：~/.openclaw/skills/heartbeat-memory/SKILL.md`;
+    console.error(errorMsg);
+    throw new Error('sessions_list 工具不可用 - 需要在主 Agent 会话中调用');
   }
   
-  // ========== 正常执行 ==========
+  if (!tools.sessions_history) {
+    throw new Error('sessions_history 工具不可用 - 需要在 Agent 运行时环境中调用');
+  }
+  
   console.log('✅ 工具检查通过:');
   Object.entries(tools).forEach(([name, available]) => {
     console.log(`   ${available ? '✅' : '⚠️'}  ${name}`);
   });
   console.log('');
+  
+  // 检查 Heartbeat 是否启用
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    const heartbeatConfig = config?.agents?.defaults?.heartbeat;
+    
+    // 检查 Heartbeat 是否启用（有 every 字段即表示启用）
+    const hasHeartbeat = heartbeatConfig && (heartbeatConfig.every || heartbeatConfig.enabled);
+    
+    if (!hasHeartbeat) {
+      console.warn('⚠️  警告：Heartbeat 未启用！heartbeat-memory 需要 Heartbeat 机制才能自动运行。');
+      console.warn('解决方案：在 openclaw.json 中添加 "agents.defaults.heartbeat": {"every": "30m"}，然后重启 Gateway');
+      console.warn('或者手动触发：在聊天中发送 "执行 heartbeat-memory"');
+    } else {
+      const interval = heartbeatConfig.every || `${heartbeatConfig.intervalMinutes || 30}m`;
+      console.log('✅ Heartbeat 已启用（interval:', interval, '）');
+    }
+  } catch (e) {
+    console.warn('⚠️  无法检查 Heartbeat 配置:', e.message);
+    console.log('');
+  }
   
   // 调用主处理函数
   return await processSessions(
@@ -1152,7 +1166,13 @@ module.exports = {
   DEFAULT_CONFIG,
   getAgentWorkspaceMap,
   determineCurrentWorkspace,
-  ensureWorkspaceStructure
+  ensureWorkspaceStructure,
+  // 导出工具模块（供外部使用）
+  syncHeartbeatMD: require('./utils/config-sync').syncHeartbeatMD,
+  computeConfigHash: require('./utils/config-sync').computeConfigHash,
+  autoDetectProcessSessionsAfter: require('./utils/date-detector').autoDetectProcessSessionsAfter,
+  filterSessions: require('./utils/session-filters').filterSessions,
+  limitSessions: require('./utils/session-filters').limitSessions
 };
 
 // 如果直接运行此文件（Node.js CLI 模式）
