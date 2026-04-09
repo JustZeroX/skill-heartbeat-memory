@@ -17,7 +17,7 @@
 <!-- Badge Row 1: Core Info -->
 [![ClawHub](https://img.shields.io/badge/ClawHub-heartbeat--memory-E75C46?logo=clawhub)](https://clawhub.ai/JustZeroX/heartbeat-memory)
 [![GitHub](https://img.shields.io/badge/GitHub-JustZeroX-181717?logo=github)](https://github.com/JustZeroX/skill-heartbeat-memory)
-[![Version](https://img.shields.io/badge/version-0.0.6-orange)](https://github.com/JustZeroX/skill-heartbeat-memory)
+[![Version](https://img.shields.io/badge/version-0.0.7-orange)](https://github.com/JustZeroX/skill-heartbeat-memory)
 
 <!-- Badge Row 2: Platforms -->
 [![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)](https://openclaw.ai) 
