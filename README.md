@@ -646,15 +646,24 @@ openclaw gateway restart
 - 📅 Auto date detection
 - ⚙️ Config auto-sync
 - 🌍 Multi-workspace support with workspace-<NAME> wildcard
+- 🔒 Subagent smart filtering - Auto-filters own subagent sessions, keeps last 200 tracking records
+- 💪 Error handling stability - Graceful exit on module load failure, prevents crashes
 
 ### 📦 Project Structure
 
 ```
 heartbeat-memory/
-├── SKILL.md (319 lines)
-├── index.js (1,169 lines)
-├── references/ (3 files)
-├── utils/ (4 modules)
+├── SKILL.md
+├── index.js                       # Main entry with Subagent filtering, state tracking
+├── references/
+│   ├── config.md
+│   ├── troubleshooting.md
+│   └── api.md
+├── utils/
+│   ├── config-sync.js             # HEARTBEAT.md sync + config hash
+│   ├── date-detector.js           # Auto date detection
+│   ├── session-filters.js         # Session filtering logic
+│   └── memory-refiner.js          # MEMORY.md refinement + incremental updates
 └── assets/
 ```
 
